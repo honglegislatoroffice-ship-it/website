@@ -1,3 +1,7 @@
 [[edge_functions]]
     path = "/api/get-news"
     function = "get-news"
+
+    [[edge_functions]]
+path = "/api/get-fb-posts"
+function = "get-fb-posts"
