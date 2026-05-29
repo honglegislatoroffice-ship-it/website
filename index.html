@@ -139,24 +139,16 @@
     </section>
 
 
-    //近期活動
     <section id="events" class="bg-slate-100 py-16">
         <div class="max-w-7xl mx-auto px-4">
             <div class="text-center mb-12">
-                <h3 class="text-3xl font-black text-blue-900 inline-block border-b-4 border-amber-500 pb-2">近期活動</h3>
-                <p class="text-slate-500 mt-2 text-sm">UPCOMING EVENTS</p>
+                <h3 class="text-3xl font-black text-blue-900 inline-block border-b-4 border-amber-500 pb-2">近期動態</h3>
+                <p class="text-slate-500 mt-2 text-sm">LATEST FACEBOOK POSTS</p>
             </div>
-            <div id="events-container" class="max-w-lg mx-auto bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden p-2 flex justify-center">
-                <iframe src="https://www.facebook.com/plugins/page.php?href=https%3A%2F%2Fwww.facebook.com%2FMongKaiHUNG%2F&tabs=timeline&width=1000&height=500&small_header=true&adapt_container_width=true&hide_cover=true&show_facepile=true" 
-                        width="100%" 
-                        height="500" 
-                        style="border:none;overflow:hidden;width:100%;height:500px;" 
-                        scrolling="no" 
-                        frameborder="0" 
-                        allowfullscreen="true" 
-                        allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-                        class="w-full h-[500px]">
-                </iframe>
+            <div id="fb-posts-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="col-span-full text-center text-slate-500 py-8">
+                    最新動態同步中... <i class="fa-solid fa-spinner fa-spin ml-2"></i>
+                </div>
             </div>
         </div>
     </section>
@@ -184,28 +176,21 @@
     </footer>
 
   <script>
-        const API_URL = '/api/get-news'; 
+        const NEWS_API_URL = '/api/get-news'; 
+        const FB_API_URL = '/api/get-fb-posts'; // 大哥哥預留給臉書新箱子的通道 🐾
 
+        // 1. 抓取最新快訊
         async function fetchNews() {
             const container = document.getElementById('news-container');
-            
             try {
-                const response = await fetch(API_URL);
-                
-                // 如果後端有抓到錯誤，直接讀取錯誤訊息並拋出
-                if (!response.ok) {
-                    const errorMsg = await response.text();
-                    throw new Error(errorMsg);
-                }
-                
+                const response = await fetch(NEWS_API_URL);
+                if (!response.ok) throw new Error(await response.text());
                 const data = await response.json();
                 container.innerHTML = ''; 
-                
                 if (data.length === 0) {
                     container.innerHTML = '<div class="p-6 text-slate-500 text-center">目前 Notion 資料庫內尚無快訊。</div>';
                     return;
                 }
-
                 data.forEach(item => {
                     const html = `
                         <div class="p-6 flex flex-col sm:flex-row sm:items-center hover:bg-slate-50 transition">
@@ -216,22 +201,59 @@
                     `;
                     container.innerHTML += html;
                 });
-
             } catch (error) {
-                console.error("錯誤詳情:", error);
-                // 💡 這裡會把具體的錯誤原因顯示在畫面上
-                container.innerHTML = `
-                    <div class="p-6 text-red-500 text-center font-bold">
-                        ❌ 連動失敗！<br>
-                        <span class="text-sm font-normal text-slate-600 block mt-2 bg-slate-100 p-3 rounded border border-slate-200 font-mono">
-                            ${error.message}
-                        </span>
-                    </div>
-                `;
+                container.innerHTML = `<div class="p-6 text-red-500 text-center font-bold">❌ 快訊連動失敗！<br><span class="text-sm font-normal text-slate-600 block mt-2 bg-slate-100 p-3 rounded border border-slate-200 font-mono">${error.message}</span></div>`;
             }
         }
 
-        document.addEventListener('DOMContentLoaded', fetchNews);
+        // 2. 抓取臉書網美卡片動態（大哥哥幫小貓貓寫的魔法陣 🧙‍♂️）
+        async function fetchFBPosts() {
+            const container = document.getElementById('fb-posts-container');
+            try {
+                const response = await fetch(FB_API_URL);
+                if (!response.ok) throw new Error(await response.text());
+                const data = await response.json();
+                container.innerHTML = '';
+                
+                if (data.length === 0) {
+                    container.innerHTML = '<div class="col-span-full text-slate-500 text-center py-8">目前尚無臉書同步動態。</div>';
+                    return;
+                }
+
+                data.forEach(item => {
+                    const html = `
+                        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition duration-300 flex flex-col h-full">
+                            ${item.image ? `
+                            <div class="h-48 overflow-hidden bg-slate-100">
+                                <img src="${item.image}" class="w-full h-full object-cover">
+                            </div>
+                            ` : ''}
+                            <div class="p-6 flex flex-col flex-1 justify-between">
+                                <div>
+                                    <div class="flex items-center justify-between mb-3">
+                                        <span class="text-slate-400 text-xs font-mono">${item.date}</span>
+                                        <span class="bg-blue-50 text-blue-700 text-xs font-bold px-2.5 py-0.5 rounded-full"><i class="fa-brands fa-facebook mr-1"></i>FB 動態</span>
+                                    </div>
+                                    <p class="text-slate-700 text-sm font-medium line-clamp-4 leading-relaxed mb-4 whitespace-pre-line">${item.content}</p>
+                                </div>
+                                <a href="${item.link}" target="_blank" class="inline-flex items-center justify-center w-full bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-blue-900 font-bold py-2.5 px-4 rounded-xl border border-slate-200 hover:border-blue-200 transition text-sm">
+                                    閱讀完整貼文 <i class="fa-solid fa-arrow-up-right-from-square ml-1.5 text-xs"></i>
+                                </a>
+                            </div>
+                        </div>
+                    `;
+                    container.innerHTML += html;
+                });
+            } catch (error) {
+                container.innerHTML = `<div class="col-span-full p-6 text-red-500 text-center font-bold">❌ 臉書動態載入失敗！<br><span class="text-sm font-normal text-slate-600 block mt-2 bg-slate-100 p-3 rounded border border-slate-200 font-mono">${error.message}</span></div>`;
+            }
+        }
+
+        // 網頁準備好就一起啟動！
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchNews();
+            fetchFBPosts();
+        });
     </script>
 </body>
 </html>
